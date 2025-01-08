@@ -14,30 +14,30 @@ class GripperControl:
         self.left_address = 1  # Device address for left gripper
         self.right_address = 0  # Device address for right gripper
         self.pos_register_address = 2  # Position register address
+        self.speed_register_address = 3
 
     def _send_modbus_command(self, address: int, register_address: int, value: int) -> bool:
         """Send a Modbus RTU command to the device.
         :return: True if the command was successful, False otherwise.
         """
         flag = False  # Initialize flag as False
-        try:
-            client = ModbusSerialClient(port=self.port, baudrate=self.baudrate, timeout=1)
-            if client.connect():
-                try:
-                    response = client.write_register(register_address, value, slave=address)
-                    if response.isError():
-                        print(f"Error: {response.message}")
-                    else:
-                        flag = True
-                        
-                except Exception as e:
-                    print(f"An error occurred while sending command: {e}")
-                finally:
-                    client.close()
-            else:
-                print("Failed to connect to the Modbus device.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        
+        client = ModbusSerialClient(port=self.port, baudrate=self.baudrate, timeout=1)
+        if client.connect():
+            try:
+                response = client.write_register(register_address, value, slave=address)
+                if response.isError():
+                    print(f"Error: {response.message}")
+                else:
+                    flag = True
+                    
+            except Exception as e:
+                print(f"An error occurred while sending command: {e}")
+            finally:
+                client.close()
+        else:
+            print("Failed to connect to the Modbus device.")
+        
         return flag
 
     def _read_modbus_register(self, address: int, register_address: int, num_registers: int):
@@ -64,6 +64,23 @@ class GripperControl:
         right_position = self._read_modbus_register(self.right_address, self.pos_register_address, read_num_registers)
         print(f"Position in left gripper: {left_position}")
         print(f"Position in right gripper: {right_position}")
+
+    def set_speed(self, speed: int):
+        """
+        Set the maximum speed for both left and right grippers.
+        :param speed: Target speed value (range 200-1023).
+        """
+        # Check speed range
+        if speed < 200 or speed > 1023:
+            print("Error: Speed value must be between 200 and 1023.")
+            return
+
+        left_speed = self._send_modbus_command(self.left_address, self.speed_register_address, speed)
+        right_speed = self._send_modbus_command(self.right_address, self.speed_register_address, speed)
+        if left_speed and right_speed:
+                print(f"Right gripper speed setting successful: {speed}")
+        
+
 
     def gripper_reset(self, open_position: int = 100):
         """Open the grippers to a specified position."""
