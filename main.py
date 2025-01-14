@@ -1,4 +1,4 @@
-from mudbus_control import GripperControl
+from e_gripper_mudbus_control import GripperControl
 
 if __name__ == "__main__":
     # Serial port settings
