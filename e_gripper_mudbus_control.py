@@ -3,7 +3,7 @@ from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.constants import Endian
 
 class GripperControl:
-    def __init__(self, port: str, baudrate: int = 115200):
+    def __init__(self, port: str, baudrate: int = 115200, raw_max_position: int = 100, raw_min_position: int = 580):
         """
         Initialize the GripperControl class.
         :param port: Serial port (e.g., 'COM9').
@@ -15,6 +15,9 @@ class GripperControl:
         self.right_address = 0  # Device address for right gripper
         self.pos_register_address = 2  # Position register address
         self.speed_register_address = 3
+        self.RAW_MAX_POSITION = raw_max_position # full open
+        self.RAW_MIN_POSITION = raw_min_position # full close
+        print(f"GripperControl initialized using port and baudrate: {port}, {baudrate}")
 
     def _send_modbus_command(self, address: int, register_address: int, value: int) -> bool:
         """Send a Modbus RTU command to the device.
@@ -79,22 +82,15 @@ class GripperControl:
         right_speed = self._send_modbus_command(self.right_address, self.speed_register_address, speed)
         if left_speed and right_speed:
                 print(f"Right gripper speed setting successful: {speed}")
+    
+    def map_position(self, percent_position: float):
+        """Map the percent position to raw position. 0% to self.RAW_MIN_POSITION, 100% to self.RAW_MAX_POSITION."""
+        return int(self.RAW_MIN_POSITION + (self.RAW_MAX_POSITION - self.RAW_MIN_POSITION) * percent_position / 100)
+
         
-
-
-    def gripper_reset(self, open_position: int = 100):
-        """Open the grippers to a specified position."""
-        if not 100 <= open_position <= 560:
-            print("Invalid position value. Position should be between 100 and 560.")
-            return
-        open_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, open_position)
-        open_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, open_position)
-        if open_left_flag and open_right_flag:
-            print(f"Write reset successful! Response Data: {open_position}")
-
-    def gripper_close(self, close_position: float):
+    def set_position_raw(self, close_position: float):
         """Close the grippers to a specified position."""
-        if not 100 <= close_position <= 560:
+        if not self.RAW_MAX_POSITION <= close_position <= self.RAW_MIN_POSITION:
             print("Invalid position value. Position should be between 100 and 560.")
             return
         write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position))
