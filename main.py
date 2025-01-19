@@ -9,7 +9,7 @@ if __name__ == "__main__":
     reset_position = 100 #default
     close_position = 200
     speed = 1022
-    position = [100, 20, 100, 10, 100]
+    position = [100, 20, 100, 10]
     # Example usage
     for _ in range(4):
         for i in position:

@@ -178,7 +178,7 @@ class GripperControl:
         write_right_flag = False
         write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position)) ##bad
         
-        # write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
+        write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
         
                
         
