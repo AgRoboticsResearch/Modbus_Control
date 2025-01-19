@@ -9,20 +9,20 @@ if __name__ == "__main__":
     reset_position = 100 #default
     close_position = 200
     speed = 1022
-    position = [30, 100, 0, 100, 0, 90]
+    position = [100, 20, 100, 10, 100]
     # Example usage
-    # gripper.set_speed(speed)
-    # for i in position:
-    #     gripper.set_position_percent(i)
-    #     time.sleep(0.01) 
+    for _ in range(4):
+        for i in position:
+            gripper.set_position_percent(i)
+            time.sleep(0.5) 
 
-    gripper.set_position_percent(10)
-    # gripper.set_position_percent(70)  # Close grippers to position range is [100, 555], max=560
-    # # gripper.gripper_reset(reset_position)  # Open grippers to default position (100)
-    # #gripper.read_position()  # Read current positions
+    # gripper.set_position_percent(80)
+    # # gripper.set_position_percent(70)  # Close grippers to position range is [100, 555], max=560
+    # # # gripper.gripper_reset(reset_position)  # Open grippers to default position (100)
+    # # #gripper.read_position()  # Read current positions
     # gripper.read_PID(key="P")   #20
-    # gripper.set_position_percent(10)
-    # # gripper.read_PID(key="P")   #20
+    # # gripper.set_position_percent(10)
+    # # # gripper.read_PID(key="P")   #20
     # gripper.set_position_percent(20)
     # gripper.read_PID(key="I")   #0
     # gripper.read_PID(key="D")   #0

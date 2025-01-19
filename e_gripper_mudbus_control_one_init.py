@@ -57,7 +57,7 @@ class GripperControl:
             return False
     
         except Exception as e:
-            print(f"An unexpected error occurred while sending command: {e}")
+            # print(f"An unexpected error occurred while sending command: {e}")
             return False
         
            
@@ -72,41 +72,23 @@ class GripperControl:
         if response.isError():
             print(f"Read Error: {response}")
             return None
-        else:
-            decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
-            print(response)
-            return [decoder.decode_16bit_uint() for _ in range(num_registers)]
+        
+        decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
+        return decoder.decode_16bit_uint()
+        
+        
+    
         # except Exception as e:
         #     print(f"An error occurred while reading register: {e}")
         #     return None
 
 
-    def read_position_circu(self, read_num_registers: int = 1):
-        """Read the current position of both left and right grippers."""
-        left_position = None
-        right_position = None
-
-        # 持续读取左夹爪位置，直到成功
-        while left_position is None:
-            left_position = self._read_modbus_register(self.left_address, self.pos_register_address, read_num_registers)
-            if left_position is not None:
-                print(f"Position in left gripper: {left_position}")
-            else:
-                print("Failed to read left gripper position. Retrying...")
-
-        # 持续读取右夹爪位置，直到成功
-        while right_position is None:
-            right_position = self._read_modbus_register(self.right_address, self.pos_register_address, read_num_registers)
-            if right_position is not None:
-                print(f"Position in right gripper: {right_position}")
-            else:
-                print("Failed to read right gripper position. Retrying...")
-        return left_position, right_position
     
     def read_position(self, read_num_registers: int = 1):
         """Read the current position of both left and right grippers."""
         
         left_position = self._read_modbus_register(self.left_address, self.pos_register_address, read_num_registers)
+        
         right_position = self._read_modbus_register(self.right_address, self.pos_register_address, read_num_registers)
         print("left_position", left_position)
         print("right_position", right_position)
@@ -126,6 +108,7 @@ class GripperControl:
         """Read the current position of both left and right grippers."""
         
         left_pos_lock = self._read_modbus_register(self.left_address, self.pos_pos_lock_register, read_num_registers)
+        
         right_pos_lock = self._read_modbus_register(self.right_address, self.pos_pos_lock_register, read_num_registers)
         print("left_pos_lock", left_pos_lock)
         print("right_pos_lock", right_pos_lock)
@@ -193,9 +176,9 @@ class GripperControl:
         # Try writing to the left address first
         write_left_flag = False
         write_right_flag = False
-        write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position)) 
-        time.sleep(0.001)  # 1 毫秒延迟
-        write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
+        write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position)) ##bad
+        
+        # write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
         
                
         
@@ -224,9 +207,9 @@ class GripperControl:
 
     def read_PID(self, key, read_num_registers: int = 1):
         if key == "P":
-            # left_PID_P = self._read_modbus_register(self.left_address, self.PID_P_address, read_num_registers)
+            left_PID_P = self._read_modbus_register(self.left_address, self.PID_P_address, read_num_registers)
             right_PID_P = self._read_modbus_register(self.right_address, self.PID_P_address, read_num_registers)
-            # print("left_PID_D ", left_PID_P)
+            print("left_PID_D ", left_PID_P)
             print("right_PID_P: ", right_PID_P)
         elif key == "I":
             left_PID_I = self._read_modbus_register(self.left_address, self.PID_I_address, read_num_registers)
