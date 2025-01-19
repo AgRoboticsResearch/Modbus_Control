@@ -14,6 +14,9 @@ pip install pyserial
 ```
 
 ## Uesage
+### The setting of timeout
+The timeout should be as small as possible to speed up the response, but tests have found that when the timeout < 0.005 causes the read to fail. In this code it is set to 0.005.
+
 ### In Ubuntu
 ```
 dmesg | grep tty

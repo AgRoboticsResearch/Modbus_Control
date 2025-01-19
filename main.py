@@ -17,7 +17,7 @@ if __name__ == "__main__":
     #     time.sleep(0.01) 
 
     gripper.set_position_percent(10)
-    gripper.set_position_percent(70)  # Close grippers to position range is [100, 555], max=560
+    # gripper.set_position_percent(70)  # Close grippers to position range is [100, 555], max=560
     # # gripper.gripper_reset(reset_position)  # Open grippers to default position (100)
     # #gripper.read_position()  # Read current positions
     # gripper.read_PID(key="P")   #20
