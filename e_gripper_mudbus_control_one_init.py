@@ -1,6 +1,8 @@
 from pymodbus.client import ModbusSerialClient
 from pymodbus.payload import BinaryPayloadDecoder
+from pymodbus.exceptions import ModbusException
 from pymodbus.constants import Endian
+import time
 
 class GripperControl:
     def __init__(self, port: str, baudrate: int = 115200, raw_max_position: int = 580, raw_min_position: int = 100):
@@ -11,8 +13,8 @@ class GripperControl:
         """
         self.port = port
         self.baudrate = baudrate
-        self.left_address = 1  # Device address for left gripper
-        self.right_address = 0  # Device address for right gripper
+        self.left_address = 2  # Device address for left gripper
+        self.right_address = 10  # Device address for right gripper
         self.pos_register_address = 2  # Position register address
         self.speed_register_address = 3  
         self.pos_pos_lock_register = 8
@@ -21,10 +23,18 @@ class GripperControl:
         self.PID_P_address = 9
         self.PID_I_address = 10
         self.PID_D_address = 11
-        self.client = ModbusSerialClient(port=self.port, baudrate=self.baudrate, timeout=0.001)
+        self.client = ModbusSerialClient(port=self.port, baudrate=self.baudrate, timeout=0.005)
         if not self.client.connect():
             raise Exception("Failed to connect to the Modbus device.")
         print(f"GripperControl initialized using port and baudrate: {port}, {baudrate}")
+
+    def close(self):
+        """
+        关闭 Modbus 客户端连接。
+        """
+        if self.client:
+            self.client.close()
+            print("Modbus client connection closed.")
 
     def _send_modbus_command(self, address: int, register_address: int, value: float) -> bool:
         """Send a Modbus RTU command to the device.
@@ -35,30 +45,40 @@ class GripperControl:
         try:
             response = self.client.write_register(register_address, value, slave=address)
             if response.isError():
-                print(f"Error: {response.message}")
+               print(f"Error: {response.message}")
             if response:
                 flag = True
+            time.sleep(0.001)  # 1 毫秒延迟
                 
                 
+                
+        except ModbusException as e:
+            print(f"ModbusException occurred while sending command: {e}")
+            return False
+    
         except Exception as e:
-            print(f"An error occurred while sending command: {e}")
+            print(f"An unexpected error occurred while sending command: {e}")
+            return False
+        
            
         return flag
 
-    def _read_modbus_register(self, address: int, register_address: int, num_registers: int):
+    def _read_modbus_register(self, id_address: int, register_address: int, num_registers: int):
         """Read a Modbus register value from the device."""
         
-        try:
-            response = self.client.read_holding_registers(register_address, num_registers, slave=address)
-            if response.isError():
-                print(f"Read Error: {response}")
-                return None
-            else:
-                decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
-                return [decoder.decode_16bit_uint() for _ in range(num_registers)]
-        except Exception as e:
-            print(f"An error occurred while reading register: {e}")
+        # try:
+        # response = self.client.read_holding_registers(register_address, num_registers, slave=id_address)
+        response = self.client.read_holding_registers(register_address, count=num_registers, slave=id_address)
+        if response.isError():
+            print(f"Read Error: {response}")
             return None
+        else:
+            decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
+            print(response)
+            return [decoder.decode_16bit_uint() for _ in range(num_registers)]
+        # except Exception as e:
+        #     print(f"An error occurred while reading register: {e}")
+        #     return None
 
 
     def read_position_circu(self, read_num_registers: int = 1):
@@ -122,22 +142,21 @@ class GripperControl:
             return
 
         left_speed = self._send_modbus_command(self.left_address, self.speed_register_address, speed)
+        
         right_speed = self._send_modbus_command(self.right_address, self.speed_register_address, speed)
         if left_speed and right_speed:
                 print(f"Right gripper speed setting successful: {speed}")
+        if left_speed:
+            print("left_speed")
+        if right_speed:
+            print("right_speed")
+
     
     def map_position(self, percent_position: float):
         """Map the percent position to raw position. 0% to self.RAW_MIN_POSITION, 100% to self.RAW_MAX_POSITION."""
         return int(self.RAW_MIN_POSITION + (self.RAW_MAX_POSITION - self.RAW_MIN_POSITION) * percent_position / 100)
 
-        
-    '''def set_position_raw(self, close_position: float):
-        
-        write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position))
-        write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))
-        if write_left_flag and write_right_flag:
-            print(f"Write close successful! Response Data: {close_position}")'''
-    
+
     def set_position_raw(self, close_position: float):
         """Set the position raw value for left and right sides of the driver.
         Retry writing to the right side if the left side is successful.
@@ -174,14 +193,15 @@ class GripperControl:
         # Try writing to the left address first
         write_left_flag = False
         write_right_flag = False
-        write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position))        
-        write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))
+        write_left_flag = self._send_modbus_command(self.left_address, self.pos_register_address, int(close_position)) 
+        time.sleep(0.001)  # 1 毫秒延迟
+        write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
+        
+               
+        
         if write_left_flag and write_right_flag:
             print(f"Write to right side successful! Close position: {close_position}")
-        elif not write_left_flag:
-            print("Retrying write to left side...")
-        elif not write_right_flag:
-            print("Retrying write to right side...")
+        
 
 
     def set_position_percent(self, percent_position: float):
@@ -198,15 +218,15 @@ class GripperControl:
         
 
         # 设置夹爪位置
-        self.set_position_raw(raw_position)
+        self.set_position_raw_direct(raw_position)
         
         
 
     def read_PID(self, key, read_num_registers: int = 1):
         if key == "P":
-            left_PID_P = self._read_modbus_register(self.left_address, self.PID_P_address, read_num_registers)
+            # left_PID_P = self._read_modbus_register(self.left_address, self.PID_P_address, read_num_registers)
             right_PID_P = self._read_modbus_register(self.right_address, self.PID_P_address, read_num_registers)
-            print("left_PID_D ", left_PID_P)
+            # print("left_PID_D ", left_PID_P)
             print("right_PID_P: ", right_PID_P)
         elif key == "I":
             left_PID_I = self._read_modbus_register(self.left_address, self.PID_I_address, read_num_registers)

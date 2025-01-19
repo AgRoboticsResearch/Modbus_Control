@@ -10,9 +10,15 @@ This module provides a Python interface to control a gripper device using Modbus
 ## Installation
 ```
 pip install pymodbus
+pip install pyserial
 ```
 
 ## Uesage
+### In Ubuntu
+```
+dmesg | grep tty
+sudo chmod 666 /dev/ttyUSB0   #if the port is USB0
+```
 The usage is all in main.py.
 #### 1.Import the Module:
 Import the GripperControl class from the module:
@@ -41,5 +47,18 @@ gripper.gripper_close(close_position)
 Read the current position of the gripper.
 ```
 gripper.read_position(read_num_registers: int = 1) 
+```
+#### 4. Value in each register
+```
+00003 最高速度 1000 #200-1023
+00004 循环模式 0
+00006 目标回写 1
+00007 极性    0
+00008 目标锁定 1
+00009 PID_P  50
+00010 PID_I  5
+00010 PID_D  0
+00014 死区   15
+00015 最大扭矩 800
 ```
 
