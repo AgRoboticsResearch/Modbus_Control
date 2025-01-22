@@ -53,15 +53,16 @@ gripper.read_position(read_num_registers: int = 1)
 ```
 #### 4. Value in each register
 ```
-00003 最高速度 1000 #200-1023
-00004 循环模式 0
-00006 目标回写 1
-00007 极性    0
-00008 目标锁定 1
+00002 Position 
+00003 最高速度-Maxspeed 1000 #200-1023 
+00004 循环模式-LoopMode 0 
+00006 目标回写-TargetWriteback 1
+00007 极性-Polarity    0
+00008 目标锁定-TargetLock 1
 00009 PID_P  50
 00010 PID_I  5
 00010 PID_D  0
-00014 死区   15
-00015 最大扭矩 800
+00014 死区-Deadzone   15
+00015 最大扭矩-MaxTrque 800
 ```
 

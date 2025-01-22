@@ -1,8 +1,9 @@
-from pymodbus.client import ModbusSerialClient
+from pymodbus.client import ModbusSerialClient, AsyncModbusSerialClient
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.exceptions import ModbusException
 from pymodbus.constants import Endian
 import time
+
 
 class GripperControl:
     def __init__(self, port: str, baudrate: int = 115200, raw_max_position: int = 580, raw_min_position: int = 100):
@@ -11,6 +12,7 @@ class GripperControl:
         :param port: Serial port (e.g., 'COM9').
         :param baudrate: Baud rate (default is 115200).
         """
+        self.init_consts()
         self.port = port
         self.baudrate = baudrate
         self.left_address = 2  # Device address for left gripper
@@ -23,10 +25,39 @@ class GripperControl:
         self.PID_P_address = 9
         self.PID_I_address = 10
         self.PID_D_address = 11
+
         self.client = ModbusSerialClient(port=self.port, baudrate=self.baudrate, timeout=0.005)
         if not self.client.connect():
             raise Exception("Failed to connect to the Modbus device.")
-        print(f"GripperControl initialized using port and baudrate: {port}, {baudrate}")
+        print(f"GripperControl Synchronous initialized using port and baudrate: {port}, {baudrate}")
+
+
+    def init_consts(self):
+        # 00002 Position 
+        # 00003 最高速度-Maxspeed 1000 #200-1023 
+        # 00004 循环模式-LoopMode 0 
+        # 00006 目标回写-TargetWriteback 1
+        # 00007 极性-Polarity    0
+        # 00008 目标锁定-TargetLock 1
+        # 00009 PID_P  50
+        # 00010 PID_I  5
+        # 00010 PID_D  0
+        # 00014 死区-Deadzone   15
+        # 00015 最大扭矩-MaxTrque 800
+        self.LEFT_ADDRESS = 2  # Device address for left gripper
+        self.RIGHT_ADDRESS = 10  # Device address for right gripper
+        self.POS_REGISTER_ADDRESS = 2  # Position register address
+        self.SPEED_REGISTER_ADDRESS = 3  # Speed register address
+        self.LOOP_MODE_REGISTER_ADDRESS = 4  # Loop mode register address
+        self.TARGET_WRITEBACK_REGISTER_ADDRESS = 6  # Target writeback register address
+        self.POLARITY_REGISTER_ADDRESS = 7  # Polarity register address
+        self.TARGET_LOCK_REGISTER_ADDRESS = 8  # Target lock register address
+        self.PID_P_REGISTER_ADDRESS = 9  # PID P register address
+        self.PID_I_REGISTER_ADDRESS = 10  # PID I register address
+        self.PID_D_REGISTER_ADDRESS = 11  # PID D register address
+        self.DEADZONE_REGISTER_ADDRESS = 14  # Deadzone register address
+        self.MAX_TORQUE_REGISTER_ADDRESS = 15  # Max torque register address
+
 
     def close(self):
         """
@@ -73,25 +104,26 @@ class GripperControl:
             print(f"Read Error: {response}")
             return None
         
-        decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
-        return decoder.decode_16bit_uint()
-        
-        
-    
+        # depericated
+        # decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
+        # value = decoder.decode_16bit_uint()
+
+        value = self.client.convert_from_registers(response.registers, ModbusSerialClient.DATATYPE.UINT16, word_order='big')
         # except Exception as e:
         #     print(f"An error occurred while reading register: {e}")
         #     return None
 
-
+        return value
     
     def read_position(self, read_num_registers: int = 1):
         """Read the current position of both left and right grippers."""
-        
-        left_position = self._read_modbus_register(self.left_address, self.pos_register_address, read_num_registers)
-        
-        right_position = self._read_modbus_register(self.right_address, self.pos_register_address, read_num_registers)
-        print("left_position", left_position)
-        print("right_position", right_position)
+        try:
+            left_position = self._read_modbus_register(self.left_address, self.pos_register_address, read_num_registers)
+            right_position = self._read_modbus_register(self.right_address, self.pos_register_address, read_num_registers)
+        except Exception as e:
+            print(f"An error occurred while reading position: {e}")
+            return None, None
+
         return left_position, right_position
 
     def set_pos_lock(self, loc_value: float):
@@ -169,7 +201,7 @@ class GripperControl:
         #     print("Failed to write to left side. Retrying...")
         #     # You can implement retry logic here if you want to keep retrying writing to left as well
 
-    def set_position_raw_direct(self, close_position: float):
+    def set_position_raw_direct(self, close_position: float, verbose=True):
         """Set the position raw value for left and right sides of the driver.
         Retry writing to the right side if the left side is successful.
         """
@@ -180,9 +212,9 @@ class GripperControl:
         
         write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
         
-               
+        print("write_left_flag", write_left_flag, "write_right_flag", write_right_flag)
         
-        if write_left_flag and write_right_flag:
+        if write_left_flag and write_right_flag and verbose:
             print(f"Write to right side successful! Close position: {close_position}")
         
 
@@ -247,4 +279,34 @@ class GripperControl:
         return True
 
 
+
+    def read_all_info_oneside(self, side_address, verbose=True):
+        pos = self._read_modbus_register(id_address=side_address, register_address=self.POS_REGISTER_ADDRESS, num_registers=1)
+        speed = self._read_modbus_register(id_address=side_address, register_address=self.SPEED_REGISTER_ADDRESS, num_registers=1)
+        loop_mode = self._read_modbus_register(id_address=side_address, register_address=self.LOOP_MODE_REGISTER_ADDRESS, num_registers=1)
+        target_writeback = self._read_modbus_register(id_address=side_address, register_address=self.TARGET_WRITEBACK_REGISTER_ADDRESS, num_registers=1)
+        polarity = self._read_modbus_register(id_address=side_address, register_address=self.POLARITY_REGISTER_ADDRESS, num_registers=1)
+        target_lock = self._read_modbus_register(id_address=side_address, register_address=self.TARGET_LOCK_REGISTER_ADDRESS, num_registers=1)
+        pid_p = self._read_modbus_register(id_address=side_address, register_address=self.PID_P_REGISTER_ADDRESS, num_registers=1)
+        pid_i = self._read_modbus_register(id_address=side_address, register_address=self.PID_I_REGISTER_ADDRESS, num_registers=1)
+        pid_d = self._read_modbus_register(id_address=side_address, register_address=self.PID_D_REGISTER_ADDRESS, num_registers=1)
+        deadzone = self._read_modbus_register(id_address=side_address, register_address=self.DEADZONE_REGISTER_ADDRESS, num_registers=1)
+        max_torque = self._read_modbus_register(id_address=side_address, register_address=self.MAX_TORQUE_REGISTER_ADDRESS, num_registers=1)
+
+        if verbose:
+            # print all info
+            print(f"-------- Side {side_address} --------")
+            print(f"Position: {pos}")
+            print(f"Speed: {speed}")
+            print(f"Loop Mode: {loop_mode}")
+            print(f"Target Writeback: {target_writeback}")
+            print(f"Polarity: {polarity}")
+            print(f"Target Lock: {target_lock}")
+            print(f"PID P: {pid_p}")
+            print(f"PID I: {pid_i}")
+            print(f"PID D: {pid_d}")
+            print(f"Deadzone: {deadzone}")
+            print(f"Max Torque: {max_torque}")
+            print("-------------------------------")
+        return pos, speed, loop_mode, target_writeback, polarity, target_lock, pid_p, pid_i, pid_d, deadzone, max_torque
 

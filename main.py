@@ -4,7 +4,7 @@ import time
 if __name__ == "__main__":
     # Serial port settings
     
-    port = "/dev/ttyUSB0"  # Change to your COM port
+    port = "/dev/ttyUSB_girpper"  # Change to your COM port
     gripper = GripperControl(port)
     reset_position = 100 #default
     close_position = 200
