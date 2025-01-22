@@ -108,7 +108,9 @@ class GripperControl:
         # decoder = BinaryPayloadDecoder.fromRegisters(response.registers, byteorder=Endian.BIG)
         # value = decoder.decode_16bit_uint()
 
-        value = self.client.convert_from_registers(response.registers, ModbusSerialClient.DATATYPE.UINT16, word_order='big')
+        value = self.client.convert_from_registers(response.registers, ModbusSerialClient.DATATYPE.UINT16)
+        # value = self.client.convert_from_registers(response.registers, ModbusSerialClient.DATATYPE.UINT16, byteorder='big')
+
         # except Exception as e:
         #     print(f"An error occurred while reading register: {e}")
         #     return None
@@ -201,7 +203,7 @@ class GripperControl:
         #     print("Failed to write to left side. Retrying...")
         #     # You can implement retry logic here if you want to keep retrying writing to left as well
 
-    def set_position_raw_direct(self, close_position: float, verbose=True):
+    def set_position_raw_direct(self, close_position: float, verbose=False):
         """Set the position raw value for left and right sides of the driver.
         Retry writing to the right side if the left side is successful.
         """
@@ -212,7 +214,7 @@ class GripperControl:
         
         write_right_flag = self._send_modbus_command(self.right_address, self.pos_register_address, int(close_position))  ##good
         
-        print("write_left_flag", write_left_flag, "write_right_flag", write_right_flag)
+        # print("write_left_flag", write_left_flag, "write_right_flag", write_right_flag)
         
         if write_left_flag and write_right_flag and verbose:
             print(f"Write to right side successful! Close position: {close_position}")
